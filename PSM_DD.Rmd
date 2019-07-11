@@ -1,0 +1,114 @@
+---
+title: "PSM and DD"
+author: "Zachary Butzin-Dozier"
+date: "7/10/2019"
+output: pdf_document
+---
+*Warning: Fictional Scenario*
+
+Uh oh – you just learned that local government officials did not appropriately randomize clusters to receive different arms of the intervention. Government officials assigned villages that voted for them to receive the treatment arms (for this example, referring to WASH+Nutrition), and assigned villages that voted against them to receive no treatment. 
+
+This violates the principle of exchangeability, as we cannot assume that the groups are comparable in all factors other than treatment. For example – all of the treatment groups (who voted for the party in power) may be high income, while all of the control groups may be low income. Differences between the groups may be due to income level, rather than the intervention.
+
+How can we salvage these data to draw meaningful conclusions?
+
+1.	Propensity score matching. 
+We can match villages that received treatment to villages that did not receive treatment, but had a similar likelihood of receiving treatment based on an index of observable characteristics
+
+SEARCH ANTHRO DOCUMENT TO DETERMINE psmatch characteristics
+
+Steps of propensity score matching (Applied Impact Evaluation – Human Development Network)
+1.	Representative and highly comparable survey of non-participants and participants
+2.	Pool the two samples and estimate a logit (or probit) model of participation
+3.	Restrict samples to assure common support (important source of bias in observational studies)
+4.	For each participant (or cluster), find a sample of non-participants with similar propensity scores
+5.	Compare the outcome indicators. The difference is the estimate of the gain due to the program for that observation
+6.	Calculate the mean of these individual gains to obtain the average overall gain
+
+```{r}
+#load packages and data
+library(MatchIt)
+library(ggplot2)
+library(dplyr)
+diar <- read.csv("washb-bangladesh-diar-public.csv")
+enrol <- read.csv("washb-bangladesh-enrol-public.csv")
+#Merge diar and enrol to include outcomes and covariates of interest
+#Create column that represents treatment or no treatment
+#should we use this data (likely lots of common support) or subset to make treatment and control groups more different?
+```
+
+```{r}
+#Estimate propensity score
+###This is a linear model of (treatment~predictors), right?
+#Which blocks received which treatments?
+pfit <- glm(block ~ momedu, hfiacat, family="binomial", data=enrol2)
+
+ps1 <- predict(pfit, type = "response")
+```
+What do you think is a weakness of matching propensities to treatment based on these criteria?
+
+```{r}
+#Distribution of PS
+p1 <- data.frame(ps1[enrol2$treat==1])
+colnames(p1) <- "ps1"
+p1$type <- 1
+
+p0 <- data.frame(ps1[enrol2$treat==0])
+colnames(p0) <- "ps1"
+p0$type <- 0
+
+plot_enrol2 <- data.frame(rbind(p1, p0))
+```
+
+```{r}
+#Plot propensity score to see common support
+ggplot(data=plot_enrol2) + geom_histogram(aes(ps1), bins=30, stat = "bin") +
+facet_wrap(~type) + coord_flip() + theme_bw()
+
+#point out that this is, in fact, randomized data, so it makes sense that there is large common support
+```
+
+```{r}
+#remove missing data - unsure if this code chunk is needed (unchanged)
+nycc <- ny %>% dplyr::select(cd, nviol, colefh, colef_i, agec2, agec3, agec4, agec5,
+agec6, agecm, race2, race3, race4, race5, racem, sex1, mar2, mar3, mar4, mar5, marm,
+brn2, brn3, spanlang, inc32, inc31, inc3m, ed4, ed3, ed2, ed1, edm, em3, yneig2, yneig3,
+yneigm)
+dim(nycc)
+nycc <- nycc[complete.cases(nycc),]
+dim(nycc)
+```
+
+```{r}
+mfit = matchit(block ~ momedu, hfiacat, data = enrol2, method = "nearest", discard="both" , caliper=0.01, replace=T))
+summary(mfit)
+```
+
+#Difference in Difference
+*A hypothetical within a hypothetical*
+After conducting the graph of propensity scores in the treated and untreated groups, you realize that there is very little common support. To conduct PSM, you need to have common support, indicating that a portion of the control group has similar propensities of being treated as those in the treatment group. 
+
+```{r}
+#create graph showing low/no common support
+```
+
+We can still use difference in difference!
+
+With difference in difference, you can compare the treatment group to a control group with different characteristics, as long as the two groups demonstrate *parallel trends*. A parallel trend means that both groups were changing at similar rates prior to the intervention. 
+
+Let's see if this is the case with the WASH treatment and control groups
+```{r}
+#graph of treatment and control pre intervention
+#indicate whether there seem to be parallel trends
+```
+
+```{r}
+#graph including all 3 times points
+#show impact
+```
+Just subtract twice!
+$$impact = (A-B)-(C-D)$$
+This is one of the most mathematically simple methods that we will cover
+```{r}
+#table showing the pre and post and enrolled nonenrolled
+```
